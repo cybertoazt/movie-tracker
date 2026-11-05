@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Watchlist & Diary</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons CDN -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            display: ['"Outfit"', 'sans-serif']
+          },
+          colors: {
+            cinema: {
+              950: '#07090e',
+              900: '#0d1117',
+              850: '#131923',
+              800: '#1b2230',
+              700: '#2c3547',
+              accent: '#e50914',
+              gold: '#f59e0b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2c3547;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3b475e;
+    }
+  </style>
+</head>
+<body class="bg-cinema-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-rose-600 selection:text-white">
+
+  <!-- TOP NAVIGATION HEADER -->
+  <header class="sticky top-0 z-30 bg-cinema-900/80 backdrop-blur-md border-b border-cinema-800/80 px-4 sm:px-8 py-3.5 transition-all">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="setActiveTab('all')">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 to-amber-500 flex items-center justify-center shadow-lg shadow-rose-950/60 ring-1 ring-white/20">
+          <i class="ph-bold ph-film-strip text-2xl text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-display font-extrabold text-xl tracking-tight leading-none bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+            Watchlist <span class="text-rose-500 font-light">&</span> Diary
+          </h1>
+          <p class="text-[11px] text-slate-400 font-medium tracking-wide">Personal Cinema Tracker</p>
+        </div>
+      </div>
+
+      <!-- Quick Actions: Add Movie + Import/Export -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button id="exportBtn" title="Export collection backup as JSON" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-850 hover:bg-cinema-800 border border-cinema-700/60 text-slate-300 transition">
+          <i class="ph ph-download-simple text-sm"></i>
+          <span>Export</span>
+        </button>
+
+        <label for="importFileInput" title="Restore from JSON" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-cinema-850 hover:bg-cinema-800 border border-cinema-700/60 text-slate-300 cursor-pointer transition">
+          <i class="ph ph-upload-simple text-sm"></i>
+          <span>Import</span>
+        </label>
+        <input type="file" id="importFileInput" accept=".json" class="hidden" />
+
+        <button onclick="openMovieModal()" class="inline-flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white shadow-lg shadow-rose-900/40 active:scale-95 transition">
+          <i class="ph-bold ph-plus text-base"></i>
+          <span class="hidden xs:inline">Log Movie</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-6 space-y-6">
+    
+    <!-- STATS SUMMARY BAR -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div class="bg-cinema-900/60 border border-cinema-800/80 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-sm">
+        <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl">
+          <i class="ph-bold ph-bookmark-simple text-2xl"></i>
+        </div>
+        <div>
+          <p class="text-xs font-medium text-slate-400">Want to Watch</p>
+          <h3 id="statWatchlist" class="text-2xl font-display font-bold text-white">0</h3>
+        </div>
+      </div>
+
+      <div class="bg-cinema-900/60 border border-cinema-800/80 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-sm">
+        <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
+          <i class="ph-bold ph-check-circle text-2xl"></i>
+        </div>
+        <div>
+          <p class="text-xs font-medium text-slate-400">Watched (Logged)</p>
+          <h3 id="statWatched" class="text-2xl font-display font-bold text-white">0</h3>
+        </div>
+      </div>
+
+      <div class="bg-cinema-900/60 border border-cinema-800/80 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-sm">
+        <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl">
+          <i class="ph-bold ph-star text-2xl"></i>
+        </div>
+        <div>
+          <p class="text-xs font-medium text-slate-400">Avg. Rating</p>
+          <h3 id="statAvgRating" class="text-2xl font-display font-bold text-white">0.0</h3>
+        </div>
+      </div>
+
+      <div class="bg-cinema-900/60 border border-cinema-800/80 rounded-2xl p-4 flex items-center gap-3.5 backdrop-blur-sm">
+        <div class="p-3 bg-rose-500/10 text-rose-400 rounded-xl">
+          <i class="ph-bold ph-popcorn text-2xl"></i>
+        </div>
+        <div>
+          <p class="text-xs font-medium text-slate-400">Top Genre</p>
+          <h3 id="statTopGenre" class="text-lg font-display font-bold text-white truncate max-w-[120px]">-</h3>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW SELECTION TABS & FILTER CONTROLS -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cinema-800/80 pb-4">
+      
+      <!-- Primary Tab Navigation -->
+      <div class="flex items-center gap-1.5 p-1 bg-cinema-900/90 rounded-2xl border border-cinema-800 w-fit">
+        <button onclick="setActiveTab('all')" id="tab-all" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 text-slate-400 hover:text-white">
+          <i class="ph-bold ph-squares-four"></i>
+          <span>All Movies</span>
+          <span id="badge-all" class="text-[10px] bg-cinema-800 text-slate-300 font-bold px-2 py-0.5 rounded-full">0</span>
+        </button>
+        <button onclick="setActiveTab('watchlist')" id="tab-watchlist" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 text-slate-400 hover:text-white">
+          <i class="ph-bold ph-clock-counter-clockwise"></i>
+          <span>Watchlist</span>
+          <span id="badge-watchlist" class="text-[10px] bg-cinema-800 text-slate-300 font-bold px-2 py-0.5 rounded-full">0</span>
+        </button>
+        <button onclick="setActiveTab('watched')" id="tab-watched" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 text-slate-400 hover:text-white">
+          <i class="ph-bold ph-book-open-text"></i>
+          <span>Watched Diary</span>
+          <span id="badge-watched" class="text-[10px] bg-cinema-800 text-slate-300 font-bold px-2 py-0.5 rounded-full">0</span>
+        </button>
+      </div>
+
+      <!-- Search, Sort & Genre Filters -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <!-- Search Input -->
+        <div class="relative flex-1 sm:w-64">
+          <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input type="text" id="searchInput" placeholder="Search title or director..." class="w-full pl-9 pr-3 py-2 bg-cinema-900 border border-cinema-800/80 rounded-xl text-xs sm:text-sm placeholder-slate-500 text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition">
+        </div>
+
+        <!-- Genre Dropdown Filter -->
+        <select id="genreFilter" class="bg-cinema-900 border border-cinema-800/80 text-xs sm:text-sm rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500/50 cursor-pointer">
+          <option value="ALL">All Genres</option>
+          <option value="Action">Action</option>
+          <option value="Sci-Fi">Sci-Fi</option>
+          <option value="Drama">Drama</option>
+          <option value="Thriller">Thriller</option>
+          <option value="Horror">Horror</option>
+          <option value="Comedy">Comedy</option>
+          <option value="Crime">Crime</option>
+          <option value="Noir">Noir</option>
+          <option value="Animation">Animation</option>
+          <option value="Romance">Romance</option>
+          <option value="Documentary">Documentary</option>
+        </select>
+
+        <!-- Sort Dropdown -->
+        <select id="sortSelect" class="bg-cinema-900 border border-cinema-800/80 text-xs sm:text-sm rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500/50 cursor-pointer">
+          <option value="newest">Added: Newest First</option>
+          <option value="oldest">Added: Oldest First</option>
+          <option value="rating-high">Rating: Highest</option>
+          <option value="rating-low">Rating: Lowest</option>
+          <option value="year-desc">Year: New to Old</option>
+          <option value="title-asc">Title: A to Z</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- MOVIE CARDS GRID -->
+    <div id="moviesGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5 min-h-[300px]">
+      <!-- Dynamically generated movie cards will appear here -->
+    </div>
+
+    <!-- EMPTY STATE -->
+    <div id="emptyState" class="hidden flex-col items-center justify-center py-16 px-4 text-center rounded-3xl border border-dashed border-cinema-800/80 bg-cinema-900/30">
+      <div class="w-16 h-16 rounded-full bg-cinema-800/60 flex items-center justify-center text-slate-500 text-3xl mb-3">
+        <i class="ph ph-film-slate"></i>
+      </div>
+      <h3 class="text-base font-bold text-slate-300">No movies found</h3>
+      <p class="text-xs text-slate-500 max-w-sm mt-1">Start by logging movies you want to watch or have already finished viewing.</p>
+      <button onclick="openMovieModal()" class="mt-4 px-4 py-2 rounded-xl text-xs font-semibold bg-cinema-800 hover:bg-cinema-700 text-white transition">
+        + Add First Movie
+      </button>
+    </div>
+  </main>
+
+  <!-- ADD / EDIT MOVIE MODAL -->
+  <div id="movieModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm transition-opacity">
+    <div class="bg-cinema-900 border border-cinema-800 rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden scale-95 transition-transform">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-cinema-800/80 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="ph-bold ph-ticket text-rose-500 text-xl"></i>
+          <h2 id="modalTitle" class="font-display font-bold text-lg text-white">Log Movie</h2>
+        </div>
+        <button onclick="closeMovieModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-cinema-800 transition">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body Form -->
+      <form id="movieForm" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4 overflow-y-auto">
+        <input type="hidden" id="movieId">
+
+        <!-- Title & Year -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Movie Title *</label>
+            <input type="text" id="movieTitle" required placeholder="e.g. Blade Runner 2049" class="w-full px-3.5 py-2.5 bg-cinema-850 border border-cinema-700/60 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-500/50">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Year</label>
+            <input type="number" id="movieYear" min="1880" max="2099" placeholder="2017" class="w-full px-3.5 py-2.5 bg-cinema-850 border border-cinema-700/60 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-500/50">
+          </div>
+        </div>
+
+        <!-- Director & Poster URL -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Director</label>
+            <input type="text" id="movieDirector" placeholder="e.g. Denis Villeneuve" class="w-full px-3.5 py-2.5 bg-cinema-850 border border-cinema-700/60 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-500/50">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Poster Image URL (optional)</label>
+            <input type="url" id="moviePoster" placeholder="https://..." class="w-full px-3.5 py-2.5 bg-cinema-850 border border-cinema-700/60 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-500/50">
+          </div>
+        </div>
+
+        <!-- Status Toggle (Watchlist vs Watched) -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Tracking Status</label>
+          <div class="grid grid-cols-2 gap-2 bg-cinema-850 p-1 rounded-2xl border border-cinema-700/50">
+            <button type="button" id="statusWatchlistBtn" onclick="setStatus('watchlist')" class="py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5">
+              <i class="ph-bold ph-clock"></i>
+              Want to Watch
+            </button>
+            <button type="button" id="statusWatchedBtn" onclick="setStatus('watched')" class="py-2 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5">
+              <i class="ph-bold ph-check"></i>
+              Watched
+            </button>
+          </div>
+          <input type="hidden" id="movieStatus" value="watchlist">
+        </div>
+
+        <!-- Watched specific details (Date watched & Rating) -->
+        <div id="watchedDetailsBox" class="space-y-4 pt-2 border-t border-cinema-800">
+          <!-- Date Watched -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Date Watched</label>
+            <input type="date" id="movieWatchedDate" class="w-full px-3.5 py-2 bg-cinema-850 border border-cinema-700/60 rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50">
+          </div>
+
+          <!-- Interactive 5-Star Rating -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Personal Rating</label>
+            <div class="flex items-center gap-1.5" id="starRatingContainer">
+              <button type="button" data-val="1" class="star-btn text-2xl text-slate-600 hover:text-amber-400 transition"><i class="ph-fill ph-star"></i></button>
+              <button type="button" data-val="2" class="star-btn text-2xl text-slate-600 hover:text-amber-400 transition"><i class="ph-fill ph-star"></i></button>
+              <button type="button" data-val="3" class="star-btn text-2xl text-slate-600 hover:text-amber-400 transition"><i class="ph-fill ph-star"></i></button>
+              <button type="button" data-val="4" class="star-btn text-2xl text-slate-600 hover:text-amber-400 transition"><i class="ph-fill ph-star"></i></button>
+              <button type="button" data-val="5" class="star-btn text-2xl text-slate-600 hover:text-amber-400 transition"><i class="ph-fill ph-star"></i></button>
+              <span id="ratingDisplayLabel" class="ml-2 text-xs font-bold text-amber-400">Unrated</span>
+            </div>
+            <input type="hidden" id="movieRating" value="0">
+          </div>
+        </div>
+
+        <!-- Genre Tags Selection -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Genre Tags</label>
+          <div class="flex flex-wrap gap-1.5" id="genreChipsContainer">
+            <!-- Dynamically populated or static chip triggers -->
+            <button type="button" class="genre-chip px-2.5 py-1 text-xs rounded-lg font-medium border border-cinema-700 bg-cinema-850 text-slate-400 hover:text-white" data-genre="Sci-Fi">Sci-Fi</button>
+            <button type="button" class="genre-chip px-2.5 py-1 text-xs rounded-lg font-medium border border-cinema-700 bg-cinema-850 text-slate-400 hover:text-white" data-genre="Thriller">Thriller</button>
+            <button type="button" class="genre-chip px-2.5 py-1 text-xs rounded-lg font-medium border border-cinema-700 bg-cinema-850 text-slate-400 hover:text-white" data-genre="Horror">Horror</button>
+            <button type="button" class="genre-chip px-2.5 py-1 text-xs rounded-lg font-medium border border-cinema-700 bg-cinema-850 text-slate-400 hover:text-white" data-genre="Noir">Noir</button>
+            <button type="button" class="genre-chip px-2.5 py-1 text-xs rounded-lg font-medium border border-cinema-700 bg-cinema-850 text-slate-400 hover:text-white" data-genre="Action">Action</button>
+            <button type="button" class="genre-chip px-2.5 py-1 text-xs rounded-lg font-medium border border-cinema-700 bg-cinema-850 text-slate-400 hover:text-white" data-genre="Drama">Drama</button>
+            <button type="button" class="genre-chip px-2.5 py-1 text-xs rounded-lg font-medium border border-cinema-700 bg-cinema-850 text-slate-400 hover:text-white" data-genre="Comedy">Comedy</button>
+            <button type="button" class="genre-chip px-2.5 py-1 text-xs rounded-lg font-medium border border-cinema-700 bg-cinema-850 text-slate-400 hover:text-white" data-genre="Crime">Crime</button>
+            <button type="button" class="genre-chip px-2.5 py-1 text-xs rounded-lg font-medium border border-cinema-700 bg-cinema-850 text-slate-400 hover:text-white" data-genre="Animation">Animation</button>
+          </div>
+          <input type="hidden" id="selectedGenres" value="[]">
+        </div>
+
+        <!-- Notes / Mini-review -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Review / Diary Notes</label>
+          <textarea id="movieNotes" rows="2" placeholder="Key takeaways, thoughts, cinema buddies, or favorite scenes..." class="w-full px-3.5 py-2.5 bg-cinema-850 border border-cinema-700/60 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-500/50 resize-none"></textarea>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="pt-2 flex items-center justify-end gap-3 border-t border-cinema-800">
+          <button type="button" onclick="closeMovieModal()" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition">Cancel</button>
+          <button type="submit" id="saveMovieBtn" class="px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-900/50 transition">Save Movie</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MOVIE DETAIL SLIDEOVER / MODAL -->
+  <div id="detailModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
+    <div id="detailContent" class="bg-cinema-900 border border-cinema-800 rounded-3xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Injected detail info -->
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- APP LOGIC -->
+  <script>
+    // Storage Key
+    const STORAGE_KEY = 'watchlist_diary_data_v1';
+
+    // State
+    let movies = [];
+    let currentFilterTab = 'all'; // 'all' | 'watchlist' | 'watched'
+    let searchQuery = '';
+    let selectedGenreFilter = 'ALL';
+    let currentSort = 'newest';
+
+    // Sample Starter Data
+    const INITIAL_MOVIES = [
+      {
+        id: '1',
+        title: 'Blade Runner 2049',
+        year: 2017,
+        director: 'Denis Villeneuve',
+        status: 'watched',
+        rating: 5,
+        watchedDate: '2024-03-15',
+        genres: ['Sci-Fi', 'Noir', 'Drama'],
+        poster: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=600&q=80',
+        notes: 'Astonishing visual direction, score by Hans Zimmer & Wallfisch is sublime.',
+        createdAt: 1710500000000
+      },
+      {
+        id: '2',
+        title: 'Chinatown',
+        year: 1974,
+        director: 'Roman Polanski',
+        status: 'watched',
+        rating: 4.5,
+        watchedDate: '2024-04-10',
+        genres: ['Noir', 'Crime', 'Drama'],
+        poster: '',
+        notes: 'Classic noir screenplay. Robert Towne masterclass.',
+        createdAt: 1712700000000
+      },
+      {
+        id: '3',
+        title: 'Dune: Part Two',
+        year: 2024,
+        director: 'Denis Villeneuve',
+        status: 'watchlist',
+        rating: 0,
+        watchedDate: '',
+        genres: ['Sci-Fi', 'Action'],
+        poster: '',
+        notes: 'Need to catch this on IMAX re-release.',
+        createdAt: 1712800000000
+      },
+      {
+        id: '4',
+        title: 'The Thing',
+        year: 1982,
+        director: 'John Carpenter',
+        status: 'watchlist',
+        rating: 0,
+        watchedDate: '',
+        genres: ['Horror', 'Sci-Fi'],
+        poster: '',
+        notes: 'Halloween watch tradition.',
+        createdAt: 1712900000000
+      }
+    ];
+
+    // Load initial movies
+    function initApp() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          movies = JSON.parse(saved);
+        } catch(e) {
+          movies = INITIAL_MOVIES;
+        }
+      } else {
+        movies = INITIAL_MOVIES;
+        saveData();
+      }
+
+      setupEventListeners();
+      renderApp();
+    }
+
+    function saveData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(movies));
+      updateStats();
+    }
+
+    // Event Listeners & UI Binding
+    function setupEventListeners() {
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        searchQuery = e.target.value.toLowerCase().trim();
+        renderMovies();
+      });
+
+      document.getElementById('genreFilter').addEventListener('change', (e) => {
+        selectedGenreFilter = e.target.value;
+        renderMovies();
+      });
+
+      document.getElementById('sortSelect').addEventListener('change', (e) => {
+        currentSort = e.target.value;
+        renderMovies();
+      });
+
+      // Star Rating interactive clicks
+      const starBtns = document.querySelectorAll('#starRatingContainer .star-btn');
+      starBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = parseInt(btn.getAttribute('data-val'), 10);
+          setModalRating(val);
+        });
+      });
+
+      // Genre chips selection inside modal
+      const chips = document.querySelectorAll('#genreChipsContainer .genre-chip');
+      chips.forEach(chip => {
+        chip.addEventListener('click', () => {
+          const genre = chip.getAttribute('data-genre');
+          toggleGenreSelection(genre, chip);
+        });
+      });
+
+      // Export handler
+      document.getElementById('exportBtn').addEventListener('click', exportJSON);
+
+      // Import handler
+      document.getElementById('importFileInput').addEventListener('change', handleImportFile);
+    }
+
+    // Tab Management
+    function setActiveTab(tab) {
+      currentFilterTab = tab;
+      
+      const tabs = ['all', 'watchlist', 'watched'];
+      tabs.forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        if (t === tab) {
+          el.className = 'tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 bg-cinema-800 text-white shadow-sm';
+        } else {
+          el.className = 'tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 text-slate-400 hover:text-white';
+        }
+      });
+
+      renderMovies();
+    }
+
+    // Toggle Watchlist or Watched directly from card
+    function toggleMovieStatus(id, event) {
+      if (event) event.stopPropagation();
+      const movie = movies.find(m => m.id === id);
+      if (!movie) return;
+
+      if (movie.status === 'watchlist') {
+        movie.status = 'watched';
+        movie.watchedDate = movie.watchedDate || new Date().toISOString().split('T')[0];
+        showToast(`Moved "${movie.title}" to Watched Diary!`);
+      } else {
+        movie.status = 'watchlist';
+        showToast(`Moved "${movie.title}" back to Watchlist.`);
+      }
+
+      saveData();
+      renderApp();
+    }
+
+    // Delete Movie
+    function deleteMovie(id, event) {
+      if (event) event.stopPropagation();
+      const movie = movies.find(m => m.id === id);
+      const title = movie ? movie.title : 'Movie';
+
+      movies = movies.filter(m => m.id !== id);
+      saveData();
+      renderApp();
+      closeDetailModal();
+      showToast(`Removed "${title}".`);
+    }
+
+    // Render Stats
+    function updateStats() {
+      const watchlistCount = movies.filter(m => m.status === 'watchlist').length;
+      const watchedCount = movies.filter(m => m.status === 'watched').length;
+      
+      // Avg rating of rated watched movies
+      const ratedMovies = movies.filter(m => m.status === 'watched' && m.rating > 0);
+      const avg = ratedMovies.length 
+        ? (ratedMovies.reduce((acc, curr) => acc + curr.rating, 0) / ratedMovies.length).toFixed(1)
+        : '0.0';
+
+      // Top Genre
+      const genreCounts = {};
+      movies.forEach(m => {
+        (m.genres || []).forEach(g => {
+          genreCounts[g] = (genreCounts[g] || 0) + 1;
+        });
+      });
+      let topGenre = '-';
+      let highest = 0;
+      Object.keys(genreCounts).forEach(g => {
+        if (genreCounts[g] > highest) {
+          highest = genreCounts[g];
+          topGenre = g;
+        }
+      });
+
+      document.getElementById('statWatchlist').textContent = watchlistCount;
+      document.getElementById('statWatched').textContent = watchedCount;
+      document.getElementById('statAvgRating').textContent = avg;
+      document.getElementById('statTopGenre').textContent = topGenre;
+
+      // Update badge numbers
+      document.getElementById('badge-all').textContent = movies.length;
+      document.getElementById('badge-watchlist').textContent = watchlistCount;
+      document.getElementById('badge-watched').textContent = watchedCount;
+    }
+
+    // Filter & Sort Logic
+    function getFilteredMovies() {
+      let list = [...movies];
+
+      // Tab filter
+      if (currentFilterTab === 'watchlist') {
+        list = list.filter(m => m.status === 'watchlist');
+      } else if (currentFilterTab === 'watched') {
+        list = list.filter(m => m.status === 'watched');
+      }
+
+      // Search Query
+      if (searchQuery) {
+        list = list.filter(m => 
+          (m.title && m.title.toLowerCase().includes(searchQuery)) ||
+          (m.director && m.director.toLowerCase().includes(searchQuery))
+        );
+      }
+
+      // Genre Filter
+      if (selectedGenreFilter !== 'ALL') {
+        list = list.filter(m => (m.genres || []).includes(selectedGenreFilter));
+      }
+
+      // Sorting
+      list.sort((a, b) => {
+        switch (currentSort) {
+          case 'oldest':
+            return (a.createdAt || 0) - (b.createdAt || 0);
+          case 'rating-high':
+            return (b.rating || 0) - (a.rating || 0);
+          case 'rating-low':
+            return (a.rating || 0) - (b.rating || 0);
+          case 'year-desc':
+            return (b.year || 0) - (a.year || 0);
+          case 'title-asc':
+            return (a.title || '').localeCompare(b.title || '');
+          case 'newest':
+          default:
+            return (b.createdAt || 0) - (a.createdAt || 0);
+        }
+      });
+
+      return list;
+    }
+
+    // Render Cards
+    function renderMovies() {
+      const grid = document.getElementById('moviesGrid');
+      const emptyState = document.getElementById('emptyState');
+      const filtered = getFilteredMovies();
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        emptyState.classList.add('flex');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      emptyState.classList.remove('flex');
+
+      grid.innerHTML = filtered.map(movie => {
+        const isWatched = movie.status === 'watched';
+        const hasPoster = movie.poster && movie.poster.trim().length > 0;
+        
+        // Stars rendering
+        let starsHtml = '';
+        if (isWatched && movie.rating > 0) {
+          starsHtml = `
+            <div class="flex items-center gap-0.5 text-amber-400 text-xs">
+              <i class="ph-fill ph-star"></i>
+              <span class="font-bold text-white text-[11px] ml-0.5">${movie.rating}</span>
+            </div>
+          `;
+        }
+
+        // Poster Placeholder Palette fallback based on ID
+        const placeholderColors = [
+          'from-slate-800 to-indigo-950',
+          'from-zinc-800 to-red-950',
+          'from-neutral-800 to-amber-950',
+          'from-gray-800 to-emerald-950'
+        ];
+        const hash = (movie.id || '1').charCodeAt(0) % placeholderColors.length;
+        const bgGradient = placeholderColors[hash];
+
+        return `
+          <div onclick="openDetailModal('${movie.id}')" class="group relative bg-cinema-900 border border-cinema-800/80 rounded-2xl overflow-hidden flex flex-col cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:border-slate-600/70 hover:shadow-xl hover:shadow-black/50">
+            
+            <!-- Poster Aspect Box -->
+            <div class="relative w-full aspect-[2/3] bg-cinema-850 overflow-hidden">
+              ${hasPoster ? `
+                <img src="${movie.poster}" alt="${movie.title}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div style="display:none;" class="w-full h-full bg-gradient-to-br ${bgGradient} flex flex-col items-center justify-center p-3 text-center">
+                  <i class="ph ph-film-slate text-3xl text-slate-500 mb-2"></i>
+                  <span class="font-display font-bold text-xs text-slate-300 leading-tight">${movie.title}</span>
+                </div>
+              ` : `
+                <div class="w-full h-full bg-gradient-to-br ${bgGradient} flex flex-col items-center justify-center p-3 text-center">
+                  <i class="ph ph-film-strip text-3xl text-slate-600 mb-2 group-hover:text-rose-400 transition"></i>
+                  <span class="font-display font-semibold text-xs text-slate-300 line-clamp-3 leading-tight">${movie.title}</span>
+                </div>
+              `}
+
+              <!-- Top Status Pill -->
+              <div class="absolute top-2 left-2 z-10">
+                ${isWatched ? `
+                  <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 backdrop-blur-md">
+                    <i class="ph-bold ph-check"></i> Watched
+                  </span>
+                ` : `
+                  <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 backdrop-blur-md">
+                    <i class="ph-bold ph-bookmark"></i> Watchlist
+                  </span>
+                `}
+              </div>
+
+              <!-- Quick Status Toggle Overlay Action -->
+              <button onclick="toggleMovieStatus('${movie.id}', event)" title="${isWatched ? 'Mark as unwatched' : 'Mark as watched'}" class="absolute top-2 right-2 z-10 w-7 h-7 rounded-lg bg-black/60 hover:bg-rose-600 text-white backdrop-blur-md border border-white/10 flex items-center justify-center opacity-80 group-hover:opacity-100 transition">
+                <i class="ph-bold ${isWatched ? 'ph-arrow-counter-clockwise' : 'ph-check'} text-xs"></i>
+              </button>
+
+              <!-- Gradient overlay at bottom of poster -->
+              <div class="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-cinema-900 via-cinema-900/60 to-transparent pointer-events-none"></div>
+            </div>
+
+            <!-- Movie Meta Info -->
+            <div class="p-3 flex-1 flex flex-col justify-between">
+              <div>
+                <div class="flex items-start justify-between gap-1 mb-1">
+                  <h4 class="font-display font-bold text-sm text-slate-100 leading-snug line-clamp-1 group-hover:text-rose-400 transition" title="${movie.title}">
+                    ${movie.title}
+                  </h4>
+                </div>
+
+                <div class="flex items-center justify-between text-[11px] text-slate-400 font-medium mb-2">
+                  <span>${movie.year || 'Unknown Year'}</span>
+                  ${starsHtml}
+                </div>
+              </div>
+
+              <!-- Genre Badges -->
+              <div class="flex flex-wrap gap-1 mt-auto">
+                ${(movie.genres || []).slice(0, 2).map(g => `
+                  <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-cinema-800 text-slate-300 border border-cinema-700/50">${g}</span>
+                `).join('')}
+                ${(movie.genres && movie.genres.length > 2) ? `
+                  <span class="text-[9px] font-semibold px-1 py-0.5 rounded bg-cinema-800 text-slate-400">+${movie.genres.length - 2}</span>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderApp() {
+      updateStats();
+      renderMovies();
+    }
+
+    // Modal Operations (Add / Edit)
+    function openMovieModal(editId = null) {
+      const modal = document.getElementById('movieModal');
+      const form = document.getElementById('movieForm');
+      form.reset();
+
+      // Reset genre chips visual
+      document.querySelectorAll('#genreChipsContainer .genre-chip').forEach(c => {
+        c.className = 'genre-chip px-2.5 py-1 text-xs rounded-lg font-medium border border-cinema-700 bg-cinema-850 text-slate-400 hover:text-white';
+      });
+      document.getElementById('selectedGenres').value = '[]';
+
+      if (editId) {
+        const movie = movies.find(m => m.id === editId);
+        if (movie) {
+          document.getElementById('modalTitle').textContent = 'Edit Movie';
+          document.getElementById('movieId').value = movie.id;
+          document.getElementById('movieTitle').value = movie.title || '';
+          document.getElementById('movieYear').value = movie.year || '';
+          document.getElementById('movieDirector').value = movie.director || '';
+          document.getElementById('moviePoster').value = movie.poster || '';
+          document.getElementById('movieNotes').value = movie.notes || '';
+          document.getElementById('movieWatchedDate').value = movie.watchedDate || '';
+          setStatus(movie.status || 'watchlist');
+          setModalRating(movie.rating || 0);
+
+          // Select Genres
+          if (movie.genres && Array.isArray(movie.genres)) {
+            document.getElementById('selectedGenres').value = JSON.stringify(movie.genres);
+            document.querySelectorAll('#genreChipsContainer .genre-chip').forEach(c => {
+              const g = c.getAttribute('data-genre');
+              if (movie.genres.includes(g)) {
+                c.className = 'genre-chip px-2.5 py-1 text-xs rounded-lg font-bold border border-rose-500 bg-rose-500/20 text-rose-300';
+              }
+            });
+          }
+        }
+      } else {
+        document.getElementById('modalTitle').textContent = 'Log Movie';
+        document.getElementById('movieId').value = '';
+        setStatus(currentFilterTab === 'watched' ? 'watched' : 'watchlist');
+        setModalRating(0);
+        document.getElementById('movieWatchedDate').value = new Date().toISOString().split('T')[0];
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeMovieModal() {
+      document.getElementById('movieModal').classList.add('hidden');
+    }
+
+    function setStatus(status) {
+      document.getElementById('movieStatus').value = status;
+      const watchlistBtn = document.getElementById('statusWatchlistBtn');
+      const watchedBtn = document.getElementById('statusWatchedBtn');
+      const detailsBox = document.getElementById('watchedDetailsBox');
+
+      if (status === 'watched') {
+        watchedBtn.className = 'py-2 text-xs font-bold rounded-xl bg-emerald-600 text-white shadow-md shadow-emerald-950 flex items-center justify-center gap-1.5 transition';
+        watchlistBtn.className = 'py-2 text-xs font-medium text-slate-400 hover:text-white flex items-center justify-center gap-1.5 transition';
+        detailsBox.classList.remove('hidden');
+      } else {
+        watchlistBtn.className = 'py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-950 flex items-center justify-center gap-1.5 transition';
+        watchedBtn.className = 'py-2 text-xs font-medium text-slate-400 hover:text-white flex items-center justify-center gap-1.5 transition';
+        detailsBox.classList.add('hidden');
+      }
+    }
+
+    function setModalRating(val) {
+      document.getElementById('movieRating').value = val;
+      const stars = document.querySelectorAll('#starRatingContainer .star-btn');
+      const label = document.getElementById('ratingDisplayLabel');
+
+      stars.forEach(s => {
+        const starVal = parseInt(s.getAttribute('data-val'), 10);
+        if (starVal <= val) {
+          s.classList.remove('text-slate-600');
+          s.classList.add('text-amber-400');
+        } else {
+          s.classList.remove('text-amber-400');
+          s.classList.add('text-slate-600');
+        }
+      });
+
+      label.textContent = val > 0 ? `${val} / 5 Stars` : 'Unrated';
+    }
+
+    function toggleGenreSelection(genre, chipEl) {
+      let current = [];
+      try {
+        current = JSON.parse(document.getElementById('selectedGenres').value);
+      } catch (e) {
+        current = [];
+      }
+
+      const idx = current.indexOf(genre);
+      if (idx > -1) {
+        current.splice(idx, 1);
+        chipEl.className = 'genre-chip px-2.5 py-1 text-xs rounded-lg font-medium border border-cinema-700 bg-cinema-850 text-slate-400 hover:text-white';
+      } else {
+        current.push(genre);
+        chipEl.className = 'genre-chip px-2.5 py-1 text-xs rounded-lg font-bold border border-rose-500 bg-rose-500/20 text-rose-300';
+      }
+
+      document.getElementById('selectedGenres').value = JSON.stringify(current);
+    }
+
+    function handleFormSubmit(event) {
+      event.preventDefault();
+      const id = document.getElementById('movieId').value;
+      const title = document.getElementById('movieTitle').value.trim();
+      const year = parseInt(document.getElementById('movieYear').value, 10) || null;
+      const director = document.getElementById('movieDirector').value.trim();
+      const poster = document.getElementById('moviePoster').value.trim();
+      const status = document.getElementById('movieStatus').value;
+      const rating = status === 'watched' ? parseFloat(document.getElementById('movieRating').value) || 0 : 0;
+      const watchedDate = status === 'watched' ? document.getElementById('movieWatchedDate').value : '';
+      const notes = document.getElementById('movieNotes').value.trim();
+      
+      let genres = [];
+      try {
+        genres = JSON.parse(document.getElementById('selectedGenres').value);
+      } catch(e) {}
+
+      if (!title) return;
+
+      if (id) {
+        // Edit existing
+        const idx = movies.findIndex(m => m.id === id);
+        if (idx !== -1) {
+          movies[idx] = {
+            ...movies[idx],
+            title,
+            year,
+            director,
+            poster,
+            status,
+            rating,
+            watchedDate,
+            notes,
+            genres
+          };
+          showToast(`Updated "${title}"`);
+        }
+      } else {
+        // Create new
+        const newMovie = {
+          id: Date.now().toString(),
+          title,
+          year,
+          director,
+          poster,
+          status,
+          rating,
+          watchedDate,
+          notes,
+          genres,
+          createdAt: Date.now()
+        };
+        movies.unshift(newMovie);
+        showToast(`Added "${title}" to your ${status === 'watched' ? 'Diary' : 'Watchlist'}`);
+      }
+
+      saveData();
+      renderApp();
+      closeMovieModal();
+    }
+
+    // Detail Modal View
+    function openDetailModal(id) {
+      const movie = movies.find(m => m.id === id);
+      if (!movie) return;
+
+      const container = document.getElementById('detailContent');
+      const isWatched = movie.status === 'watched';
+
+      let starsRender = '';
+      if (isWatched) {
+        starsRender = Array.from({ length: 5 }, (_, i) => {
+          const filled = i < movie.rating;
+          return `<i class="ph-fill ph-star ${filled ? 'text-amber-400' : 'text-slate-700'} text-lg"></i>`;
+        }).join('');
+      }
+
+      container.innerHTML = `
+        <div class="relative bg-cinema-850 p-6 flex flex-col sm:flex-row gap-6 border-b border-cinema-800">
+          <!-- Poster Preview -->
+          <div class="w-full sm:w-36 aspect-[2/3] rounded-2xl bg-cinema-900 border border-cinema-700/60 overflow-hidden flex-shrink-0 flex items-center justify-center">
+            ${movie.poster ? `
+              <img src="${movie.poster}" alt="${movie.title}" class="w-full h-full object-cover">
+            ` : `
+              <div class="text-center p-2 text-slate-500">
+                <i class="ph ph-film-slate text-4xl mb-1"></i>
+                <p class="text-[10px]">No Poster</p>
+              </div>
+            `}
+          </div>
+
+          <!-- Quick Head Info -->
+          <div class="flex-1 flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between">
+                <div>
+                  <h3 class="font-display font-black text-2xl text-white tracking-tight leading-tight">${movie.title}</h3>
+                  <p class="text-sm text-slate-400 mt-0.5">
+                    ${movie.year ? `<span>${movie.year}</span> • ` : ''}
+                    <span>${movie.director ? `Directed by <strong class="text-slate-300">${movie.director}</strong>` : 'Director unlisted'}</span>
+                  </p>
+                </div>
+                <button onclick="closeDetailModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-cinema-800 transition">
+                  <i class="ph-bold ph-x text-lg"></i>
+                </button>
+              </div>
+
+              <!-- Rating / Status strip -->
+              <div class="mt-4 flex flex-wrap items-center gap-3">
+                ${isWatched ? `
+                  <div class="flex items-center gap-1.5">
+                    <div class="flex items-center gap-0.5">${starsRender}</div>
+                    <span class="text-xs font-bold text-amber-400 ml-1">${movie.rating ? `${movie.rating}/5` : 'No rating'}</span>
+                  </div>
+                  ${movie.watchedDate ? `
+                    <span class="text-xs text-slate-400 flex items-center gap-1">
+                      <i class="ph ph-calendar-blank"></i> Watched on ${movie.watchedDate}
+                    </span>
+                  ` : ''}
+                ` : `
+                  <span class="text-xs px-2.5 py-1 rounded-lg bg-indigo-500/15 text-indigo-400 font-semibold border border-indigo-500/30 flex items-center gap-1.5">
+                    <i class="ph-bold ph-bookmark"></i> On Want to Watch list
+                  </span>
+                `}
+              </div>
+
+              <!-- Genres -->
+              <div class="flex flex-wrap gap-1.5 mt-3">
+                ${(movie.genres || []).map(g => `
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-cinema-800 text-slate-300 border border-cinema-700/60">${g}</span>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- Toggle Status Direct Button -->
+            <div class="mt-5">
+              <button onclick="toggleMovieStatus('${movie.id}')" class="text-xs font-semibold px-3 py-1.5 rounded-xl border border-cinema-700/80 bg-cinema-800/80 hover:bg-cinema-700 text-slate-200 transition inline-flex items-center gap-1.5">
+                <i class="ph-bold ${isWatched ? 'ph-arrow-counter-clockwise' : 'ph-check'} text-rose-500"></i>
+                <span>${isWatched ? 'Move back to Watchlist' : 'Mark as Watched'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes / Thoughts Section -->
+        <div class="p-6 overflow-y-auto space-y-4">
+          <div>
+            <h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Review & Diary Thoughts</h5>
+            <div class="p-4 rounded-2xl bg-cinema-850/80 border border-cinema-800 text-sm text-slate-200 leading-relaxed min-h-[70px]">
+              ${movie.notes ? movie.notes : '<span class="text-slate-500 italic">No notes logged for this movie yet. Click edit to add your thoughts!</span>'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="px-6 py-4 bg-cinema-900 border-t border-cinema-800 flex items-center justify-between">
+          <button onclick="deleteMovie('${movie.id}')" class="text-xs font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1 transition">
+            <i class="ph-bold ph-trash"></i> Delete
+          </button>
+
+          <div class="flex items-center gap-2">
+            <button onclick="closeDetailModal(); openMovieModal('${movie.id}')" class="px-4 py-2 rounded-xl text-xs font-bold bg-cinema-800 hover:bg-cinema-700 text-white transition flex items-center gap-1.5">
+              <i class="ph-bold ph-pencil-simple"></i> Edit Entry
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('detailModal').classList.remove('hidden');
+    }
+
+    function closeDetailModal() {
+      document.getElementById('detailModal').classList.add('hidden');
+    }
+
+    // Export & Import Handlers
+    function exportJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(movies, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `watchlist_diary_backup_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('Collection exported successfully!');
+    }
+
+    function handleImportFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (Array.isArray(imported)) {
+            movies = imported;
+            saveData();
+            renderApp();
+            showToast(`Imported ${imported.length} movie records!`);
+          } else {
+            showToast('Invalid file format. Expected a JSON array.');
+          }
+        } catch(err) {
+          showToast('Could not parse imported JSON file.');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = ''; // Reset input
+    }
+
+    // Non-intrusive Toast Notification
+    function showToast(message) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'px-4 py-2.5 rounded-xl bg-cinema-800/95 border border-cinema-700 text-white text-xs font-semibold shadow-2xl backdrop-blur-md flex items-center gap-2 transform transition-all duration-300 translate-y-3 opacity-0 pointer-events-auto';
+      toast.innerHTML = `<i class="ph-bold ph-info text-rose-500 text-base"></i> <span>${message}</span>`;
+      container.appendChild(toast);
+
+      // Animate in
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-3', 'opacity-0');
+      });
+
+      // Auto dismiss
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    // Initialize when DOM is ready
+    window.onload = initApp;
+  </script>
+</body>
+</html>
