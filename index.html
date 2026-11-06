@@ -13,7 +13,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0f1015" />
   
-  <!-- Web App Manifest (Data URI for single-file deployment) -->
+  <!-- Web App Manifest -->
   <link rel="manifest" href="data:application/manifest+json;utf-8,%7B%22name%22%3A%22Watchlist%20%26%20Diary%22%2C%22short_name%22%3A%22MovieDiary%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f1015%22%2C%22theme_color%22%3A%22%230f1015%22%7D" />
 
   <title>Watchlist & Diary</title>
@@ -25,6 +25,7 @@
       --accent: #e50914;
       --accent-hover: #f40612;
       --gold: #f5c518;
+      --star-empty: #3a3d52;
       --text: #ffffff;
       --text-muted: #8b8ea0;
       --input-bg: #11121a;
@@ -285,11 +286,31 @@
       margin-bottom: 8px;
     }
 
-    .rating-stars {
-      color: var(--gold);
-      font-size: 0.85rem;
-      letter-spacing: 2px;
+    /* Interactive Card Rating Stars */
+    .card-rating-container {
       margin-bottom: 6px;
+    }
+
+    .interactive-stars {
+      display: inline-flex;
+      gap: 2px;
+      font-size: 1.15rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .star-btn {
+      color: var(--star-empty);
+      transition: color 0.15s ease, transform 0.1s ease;
+      display: inline-block;
+    }
+
+    .star-btn.filled {
+      color: var(--gold);
+    }
+
+    .star-btn:active {
+      transform: scale(1.25);
     }
 
     .tags-container {
@@ -388,9 +409,9 @@
     .star-rating-select {
       display: flex;
       gap: 6px;
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       cursor: pointer;
-      color: #3b3d52;
+      color: var(--star-empty);
     }
 
     .star-rating-select .star.active {
@@ -489,7 +510,7 @@
 
         <div id="watchedFields" style="display: none;">
           <div class="form-group">
-            <label>Your Rating</label>
+            <label>Rating (Tap Stars)</label>
             <div class="star-rating-select" id="starContainer">
               <span class="star" onclick="setRating(1)">★</span>
               <span class="star" onclick="setRating(2)">★</span>
@@ -507,7 +528,7 @@
 
           <div class="form-group">
             <label>Notes / Review</label>
-            <textarea id="movieReview" class="form-textarea" rows="3" placeholder="Review or notes..."></textarea>
+            <textarea id="movieReview" class="form-textarea" rows="3" placeholder="Review, favorite scenes, audio notes..."></textarea>
           </div>
         </div>
 
@@ -577,6 +598,17 @@
       stars.forEach((star, idx) => {
         star.classList.toggle('active', idx < val);
       });
+    }
+
+    // Direct card quick-rating handler
+    function setQuickRating(id, ratingVal, event) {
+      if (event) event.stopPropagation();
+      const movie = movies.find(m => m.id === id);
+      if (!movie) return;
+      // Tapping same star toggles it off back to 0
+      movie.rating = (movie.rating === ratingVal) ? 0 : ratingVal;
+      movie.updatedAt = Date.now();
+      saveToStorage();
     }
 
     function openModal(editId = null) {
@@ -719,9 +751,16 @@
         const card = document.createElement('div');
         card.className = 'movie-card';
 
+        // Render interactive star ratings on watched cards
         let starsHtml = '';
-        if (m.status === 'watched' && m.rating > 0) {
-          starsHtml = `<div class="rating-stars">${'★'.repeat(m.rating)}${'☆'.repeat(5 - m.rating)}</div>`;
+        if (m.status === 'watched') {
+          const currentRating = m.rating || 0;
+          let starSpans = '';
+          for (let i = 1; i <= 5; i++) {
+            const isFilled = i <= currentRating;
+            starSpans += `<span class="star-btn ${isFilled ? 'filled' : ''}" onclick="setQuickRating('${m.id}', ${i}, event)">★</span>`;
+          }
+          starsHtml = `<div class="card-rating-container"><div class="interactive-stars">${starSpans}</div></div>`;
         }
 
         let tagsHtml = '';
@@ -769,7 +808,7 @@
       const jsonString = JSON.stringify(movies, null, 2);
       const filename = `movies_backup_${new Date().toISOString().split('T')[0]}.json`;
 
-      // 1. Check for native Share API support (iOS standalone + Android Chrome)
+      // 1. Share API support
       if (navigator.share) {
         try {
           const file = new File([jsonString], filename, { type: 'application/json' });
@@ -786,7 +825,7 @@
         }
       }
 
-      // 2. Direct Anchor download (standard Android Chrome & desktop browsers)
+      // 2. Direct Anchor download
       try {
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
