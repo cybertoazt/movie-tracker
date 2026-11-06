@@ -2,10 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  
+  <!-- iOS Meta Tags -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Movie Diary" />
+  
+  <!-- Android Meta Tags -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0f1015" />
+  
+  <!-- Web App Manifest (Data URI for single-file deployment) -->
+  <link rel="manifest" href="data:application/manifest+json;utf-8,%7B%22name%22%3A%22Watchlist%20%26%20Diary%22%2C%22short_name%22%3A%22MovieDiary%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f1015%22%2C%22theme_color%22%3A%22%230f1015%22%7D" />
+
   <title>Watchlist & Diary</title>
   <style>
     :root {
@@ -33,7 +43,8 @@
       background-color: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      padding-bottom: 60px;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
     }
 
     header {
@@ -195,7 +206,6 @@
       display: flex;
       flex-direction: column;
       position: relative;
-      transition: transform 0.15s ease;
     }
 
     .poster-box {
@@ -249,12 +259,6 @@
       justify-content: center;
       cursor: pointer;
       font-size: 0.85rem;
-      transition: 0.15s;
-    }
-
-    .icon-btn:hover {
-      background: var(--accent);
-      border-color: var(--accent);
     }
 
     .icon-btn.delete-btn:hover {
@@ -423,7 +427,7 @@
     </div>
 
     <div class="filter-bar">
-      <input type="text" id="searchInput" class="search-input" placeholder="Search by title, director, or genre..." oninput="renderMovies()" />
+      <input type="text" id="searchInput" class="search-input" placeholder="Search title, director, genre..." oninput="renderMovies()" />
       <select id="sortSelect" class="sort-select" onchange="renderMovies()">
         <option value="dateDesc">Recently Added</option>
         <option value="ratingDesc">Highest Rated</option>
@@ -480,10 +484,9 @@
 
         <div class="form-group">
           <label>Genres (comma-separated)</label>
-          <input type="text" id="movieGenres" class="form-input" placeholder="Sci-Fi, Thriller, Cyberpunk" />
+          <input type="text" id="movieGenres" class="form-input" placeholder="Sci-Fi, Thriller, Neo-Noir" />
         </div>
 
-        <!-- Watched Only Fields -->
         <div id="watchedFields" style="display: none;">
           <div class="form-group">
             <label>Your Rating</label>
@@ -504,7 +507,7 @@
 
           <div class="form-group">
             <label>Notes / Review</label>
-            <textarea id="movieReview" class="form-textarea" rows="3" placeholder="Thoughts, favorite scenes, audio mix..."></textarea>
+            <textarea id="movieReview" class="form-textarea" rows="3" placeholder="Review or notes..."></textarea>
           </div>
         </div>
 
@@ -513,6 +516,24 @@
           <button type="submit" class="btn btn-primary" id="saveBtn">Save Movie</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Manual Backup Fallback Modal -->
+  <div id="backupModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 style="font-size: 1.15rem;">Export Data</h2>
+        <button class="btn" onclick="closeBackupModal()">✕</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+        Tap Copy to copy your JSON library text directly to your clipboard.
+      </p>
+      <textarea id="backupTextarea" class="form-textarea" rows="8" readonly style="font-family: monospace; font-size: 0.75rem; margin-bottom: 16px;"></textarea>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn" onclick="closeBackupModal()">Close</button>
+        <button class="btn btn-primary" onclick="copyBackupToClipboard()">Copy JSON</button>
+      </div>
     </div>
   </div>
 
@@ -610,7 +631,6 @@
       const review = document.getElementById('movieReview').value.trim();
 
       if (id) {
-        // Edit existing
         const index = movies.findIndex(m => m.id === id);
         if (index !== -1) {
           movies[index] = {
@@ -628,7 +648,6 @@
           };
         }
       } else {
-        // Create new
         const newMovie = {
           id: 'mov_' + Date.now() + Math.random().toString(36).substring(2, 6),
           title,
@@ -663,7 +682,6 @@
       const search = document.getElementById('searchInput').value.toLowerCase();
       const sort = document.getElementById('sortSelect').value;
 
-      // Update counters
       const watchlistCount = movies.filter(m => m.status === 'watchlist').length;
       const watchedCount = movies.filter(m => m.status === 'watched').length;
       document.getElementById('countWatchlist').textContent = watchlistCount;
@@ -679,7 +697,6 @@
         );
       }
 
-      // Sorting
       filtered.sort((a, b) => {
         if (sort === 'ratingDesc') return (b.rating || 0) - (a.rating || 0);
         if (sort === 'yearDesc') return (b.year || 0) - (a.year || 0);
@@ -748,14 +765,68 @@
         .replace(/'/g, '&#039;');
     }
 
-    function exportData() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(movies, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `movies_backup_${new Date().toISOString().split('T')[0]}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
+    async function exportData() {
+      const jsonString = JSON.stringify(movies, null, 2);
+      const filename = `movies_backup_${new Date().toISOString().split('T')[0]}.json`;
+
+      // 1. Check for native Share API support (iOS standalone + Android Chrome)
+      if (navigator.share) {
+        try {
+          const file = new File([jsonString], filename, { type: 'application/json' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'Movie Tracker Backup',
+              text: 'Movie Watchlist & Diary JSON Backup'
+            });
+            return;
+          }
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+        }
+      }
+
+      // 2. Direct Anchor download (standard Android Chrome & desktop browsers)
+      try {
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 200);
+        return;
+      } catch (err) {
+        console.warn('Anchor download failed:', err);
+      }
+
+      // 3. Universal Copy Fallback
+      showBackupModal(jsonString);
+    }
+
+    function showBackupModal(text) {
+      document.getElementById('backupTextarea').value = text;
+      document.getElementById('backupModal').classList.add('active');
+    }
+
+    function closeBackupModal() {
+      document.getElementById('backupModal').classList.remove('active');
+    }
+
+    function copyBackupToClipboard() {
+      const textarea = document.getElementById('backupTextarea');
+      textarea.select();
+      textarea.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(textarea.value).then(() => {
+        alert('Copied JSON data to clipboard!');
+        closeBackupModal();
+      }).catch(() => {
+        alert('Failed to copy. Please manually select and copy the text.');
+      });
     }
 
     function importData(event) {
